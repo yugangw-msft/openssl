@@ -58,7 +58,7 @@
 #endif
 #include <assert.h>
 
-int CRYPTO_xts128_encrypt(const XTS128_CONTEXT *ctx,
+int CRYPTO_xts128_encrypt_core(const XTS128_CONTEXT *ctx,
                           const unsigned char iv[16],
                           const unsigned char *inp, unsigned char *out,
                           size_t len, int enc)
@@ -201,4 +201,26 @@ int CRYPTO_xts128_encrypt(const XTS128_CONTEXT *ctx,
     }
 
     return 0;
+}
+
+int CRYPTO_xts128_encrypt(const XTS128_CONTEXT *ctx,
+	const unsigned char iv[16],
+	const unsigned char *inp, unsigned char *out,
+	size_t len, int enc) {
+	u64 *unit = (u64*)iv;
+	int result = 0;
+	const unsigned char *inp_t = inp;
+	unsigned char *out_t = out;
+	for (unsigned int i = 0; i < len / 512; i++) {
+		 result = CRYPTO_xts128_encrypt_core(ctx, iv, inp_t, out_t, 512, enc);
+		 if (result == -1) {
+			 return -1;
+		 }
+		 else {
+			 *unit = *unit + 1;
+			 inp_t += 512;
+			 out_t += 512;
+		 }
+	}
+	return 0;
 }
